@@ -1,0 +1,86 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+secrets.*
+config.local.php
+conexion.local.php
+control/conexion.local.php
+
+# PHP dependencies and tooling
+vendor/
+composer.phar
+.phpunit.result.cache
+.php-cs-fixer.cache
+.phpstan/
+.psalm/
+
+# JavaScript dependencies/build output, in case tooling is added later
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.cache/
+.parcel-cache/
+.vite/
+
+# Logs, runtime cache and sessions
+*.log
+logs/
+log/
+tmp/
+temp/
+cache/
+sessions/
+
+# Database dumps and backups
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.backup
+*.dump
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Generated exports
+exports/
+reportes/
+*.csv
+*.xlsx
+*.xls
+
+# Uploaded/runtime media
+uploads/
+upload/
+public/uploads/
+control/uploads/
+control/upload/
+
+# Local certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+
