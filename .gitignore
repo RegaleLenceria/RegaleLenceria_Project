@@ -1,86 +1,76 @@
-# OS / editor
-.DS_Store
-Thumbs.db
-Desktop.ini
-*.swp
-*.swo
-*~
-.idea/
-.vscode/
-!.vscode/extensions.json
-!.vscode/settings.json.example
+# ============================================================
+# .gitignore — Regalele Lencería Front (React + Vite)
+# ============================================================
 
-# Local environment and secrets
-.env
-.env.*
-!.env.example
-*.local
-*.secret
-secrets.*
-config.local.php
-conexion.local.php
-control/conexion.local.php
-
-# PHP dependencies and tooling
-vendor/
-composer.phar
-.phpunit.result.cache
-.php-cs-fixer.cache
-.phpstan/
-.psalm/
-
-# JavaScript dependencies/build output, in case tooling is added later
+# ---- Dependencias ----
 node_modules/
+.pnpm-store/
+.yarn/
+
+# ---- Build / output ----
+dist/
+dist-ssr/
+build/
+
+# ---- Vite ----
+.vite/
+vite.config.ts.timestamp-*
+
+# ---- Entorno / secretos ----
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ---- Logs ----
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-dist/
-build/
+*.log
+
+# ---- Editor / IDE ----
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ---- TypeScript ----
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ---- Docker ----
+# Mantener Dockerfile y docker-compose.yml pero ignorar datos de volumen
+*.dockerignore
+
+# ---- Base de datos (importante: no subir el dump si tiene datos sensibles) ----
+# Comentar la siguiente línea si quieres versionar el SQL
+# regalele_base.sql
+
+# ---- Uploads de productos (generados por el sistema) ----
+upload/
+public/upload/
+
+# ---- Cache ----
 .cache/
 .parcel-cache/
-.vite/
+.eslintcache
+.stylelintcache
 
-# Logs, runtime cache and sessions
-*.log
-logs/
-log/
-tmp/
-temp/
-cache/
-sessions/
+# ---- Test ----
+coverage/
+.nyc_output
 
-# Database dumps and backups
-*.sql
-*.sqlite
-*.sqlite3
-*.db
+# ---- Misc ----
+*.local
 *.bak
-*.backup
-*.dump
-*.zip
-*.tar
-*.tar.gz
-*.rar
-*.7z
-
-# Generated exports
-exports/
-reportes/
-*.csv
-*.xlsx
-*.xls
-
-# Uploaded/runtime media
-uploads/
-upload/
-public/uploads/
-control/uploads/
-control/upload/
-
-# Local certificates and keys
-*.pem
-*.key
-*.crt
-*.p12
-
+*.tmp
+*.swp
+~$*

@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # React / Vite Frontend — Nginx sirviendo el build estático
+  # Accede en: http://localhost:8081
+  # ─────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:80"
+    depends_on:
+      - php-api
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # PHP API — Lee de la BD y sirve /api/* y /upload/*
+  # Accede en: http://localhost:8083  (proxy desde web y Vite)
+  # ─────────────────────────────────────────────────────────────
+  php-api:
+    image: php:8.2-apache
+    ports:
+      - "8083:80"
+    volumes:
+      - ./api:/var/www/html/api          # Endpoints PHP
+      - ./upload:/var/www/html/upload    # Imágenes de productos
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: "8825358Nsu"
+      DB_NAME: regalele_base
+      DB_PORT: 3306
+      UPLOAD_BASE: "http://localhost:8083/upload"
+    depends_on:
+      - db
+    restart: unless-stopped
+    command: >
+      bash -c "
+        docker-php-ext-install mysqli &&
+        docker-php-ext-enable mysqli &&
+        a2enmod rewrite &&
+        apache2-foreground
+      "
+
+  # ─────────────────────────────────────────────────────────────
+  # MySQL — Base de datos
+  # ─────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "8825358Nsu"
+      MYSQL_DATABASE: "regalele_base"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./regalele_base.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # phpMyAdmin — Administración visual de la BD
+  # Accede en: http://localhost:8082
+  # ─────────────────────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: "8825358Nsu"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  db_data:
