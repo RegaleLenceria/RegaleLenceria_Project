@@ -244,7 +244,7 @@ export function CategoryPage({ categoryName, subcategory, onSubcategoryChange, o
         <MobileFiltersDrawer
           isOpen={showFilters}
           onClose={() => setShowFilters(false)}
-          filters={{ subcategories: activeSubcategory ? [activeSubcategory] : [], materials: [], colors: [], sizes: [], priceRange: [0, 9999] }}
+          filters={{ subcategories: activeSubcategory ? [activeSubcategory] : [], materials: [], colors: [], sizes: [] }}
           availableFilters={{ subcategories: menuSubcategories, materials: [], colors: [], sizes: [] }}
           sortBy={sortBy}
           onSortChange={v => setSortBy(v as typeof sortBy)}
