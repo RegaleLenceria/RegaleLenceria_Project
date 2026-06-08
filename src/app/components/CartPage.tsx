@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -10,6 +11,8 @@ interface CartPageProps {
 
 export function CartPage({ onBackClick }: CartPageProps) {
   const { items, removeItem, updateQuantity, clearCart, getTotal } = useCart();
+  const [billingName, setBillingName] = useState('');
+  const [billingNit, setBillingNit] = useState('');
 
   const handleWhatsAppOrder = () => {
     if (items.length === 0) return;
@@ -17,6 +20,15 @@ export function CartPage({ onBackClick }: CartPageProps) {
     const total = getTotal();
     let message = '¡Hola! Me gustaría hacer el siguiente pedido:\n\n';
 
+    // Agregar datos de facturación si están presentes
+    if (billingName.trim() || billingNit.trim()) {
+      message += '*DATOS DE FACTURACIÓN:*\n';
+      if (billingName.trim()) message += `• Nombre: ${billingName.trim()}\n`;
+      if (billingNit.trim()) message += `• NIT/CI: ${billingNit.trim()}\n`;
+      message += '\n';
+    }
+
+    message += '*DETALLE DEL PEDIDO:*\n';
     items.forEach((item, index) => {
       const itemPrice = parseFloat(item.price.replace(',', ''));
       const itemTotal = itemPrice * item.quantity;
@@ -193,6 +205,39 @@ export function CartPage({ onBackClick }: CartPageProps) {
                 </motion.div>
               );
             })}
+          </div>
+
+          {/* Datos de Facturación */}
+          <div className="bg-muted/30 rounded-2xl p-6 mb-6">
+            <h3 className="text-lg font-medium mb-4">Datos de Facturación</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="billingName" className="block text-sm font-medium text-muted-foreground mb-1">
+                  Nombre de Facturación
+                </label>
+                <input
+                  type="text"
+                  id="billingName"
+                  value={billingName}
+                  onChange={(e) => setBillingName(e.target.value)}
+                  placeholder="Ej. Juan Pérez"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="billingNit" className="block text-sm font-medium text-muted-foreground mb-1">
+                  NIT o Carnet de Identidad
+                </label>
+                <input
+                  type="text"
+                  id="billingNit"
+                  value={billingNit}
+                  onChange={(e) => setBillingNit(e.target.value)}
+                  placeholder="Ej. 1234567"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Summary */}

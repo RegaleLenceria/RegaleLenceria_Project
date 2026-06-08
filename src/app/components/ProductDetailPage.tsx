@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchProductDetail } from '../utils/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Plus, Minus, ShoppingCart, Check } from 'lucide-react';
 import { ProductCard } from './ProductCard';
@@ -9,13 +10,7 @@ import { useCart } from '../context/CartContext';
 
 
 interface ProductDetailPageProps {
-  product?: {
-    name: string;
-    category: string;
-    subcategory: string;
-    price?: string;
-    sku?: string;
-  };
+  product?: any;
   onProductClick?: (product?: any) => void;
   onHomeClick?: () => void;
   onCategoryClick?: (category: string) => void;
@@ -26,6 +21,26 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
   const fullProduct = productProp?.sku ? products.find(p => p.sku === productProp.sku) : null;
   const { addItem } = useCart();
 
+  const [dbProduct, setDbProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (productProp?.id) {
+      setLoading(true);
+      fetchProductDetail(productProp.id)
+        .then((data) => {
+          setDbProduct(data);
+          setCurrentImage(0);
+          setSelectedColorIndex(0);
+          setSelectedSizeIndex(0);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else {
+      setDbProduct(null);
+    }
+  }, [productProp?.id]);
+
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [selectedSizeIndex, setSelectedSizeIndex] = useState(0);
@@ -33,43 +48,47 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
 
-  const productName = fullProduct?.name || productProp?.name || 'Conjunto Victoria';
-  const productCategory = fullProduct?.category || productProp?.category || 'Lencería';
-  const productSubcategory = fullProduct?.subcategory || productProp?.subcategory || 'Conjunto';
-  const productPrice = fullProduct?.price || productProp?.price || '1111.00';
-  const productSKU = fullProduct?.sku || productProp?.sku || 'LS-2024-123';
-  const productImages = fullProduct?.images || productProp?.images || [
-    'https://images.unsplash.com/photo-1762195020829-835d05d3ee80?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    'https://images.unsplash.com/photo-1763906471843-aa53dad9fba8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    'https://images.unsplash.com/photo-1762843353166-e0542bba1a66?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    'https://images.unsplash.com/photo-1762843352569-6350701c80d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-  ];
-  const productColors = fullProduct?.colors || ['Negro', 'Blanco', 'Rosa', 'Rojo'];
-  const productSizes = fullProduct?.sizes || ['XS', 'S', 'M', 'L', 'XL'];
-  const productMaterials = fullProduct?.material || ['Encaje', 'Microfibra'];
-  const stockAvailable = fullProduct?.stock || 5;
-  const shortDescription = fullProduct?.description.short || 'Elegante conjunto de lencería importada, confeccionado con materiales de la más alta calidad. Diseño sofisticado que combina comodidad y sensualidad.';
-  const longDescription = fullProduct?.description.long || '';
-  const features = fullProduct?.description.features || [];
+  const [zoomStyle, setZoomStyle] = useState<React.CSSProperties>({
+    transformOrigin: 'center center',
+    transform: 'scale(1)',
+  });
+  const [isZoomed, setIsZoomed] = useState(false);
 
-  const nextImage = () => {
-    setCurrentImage((prev) => (prev + 1) % productImages.length);
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.innerWidth < 768) return; // solo en web / escritorio
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: 'scale(2.2)', // zoom de 2.2x
+    });
   };
 
-  const prevImage = () => {
-    setCurrentImage((prev) => (prev - 1 + productImages.length) % productImages.length);
+  const handleMouseEnter = () => {
+    if (window.innerWidth < 768) return;
+    setIsZoomed(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsZoomed(false);
+    setZoomStyle({
+      transformOrigin: 'center center',
+      transform: 'scale(1)',
+    });
   };
 
   const handleAddToCart = () => {
     addItem({
-      id: fullProduct?.id || productSKU,
+      id: productData?.id || productSKU,
       name: productName,
       price: productPrice,
       sku: productSKU,
-      color: productColors[selectedColorIndex],
-      size: productSizes[selectedSizeIndex],
+      color: colorsList[selectedColorIndex]?.name || '',
+      size: productSizes[selectedSizeIndex] || '',
       quantity: quantity,
-      image: productImages[0],
+      image: productImages[0] || '',
     });
 
     // Mostrar feedback visual
@@ -81,6 +100,59 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
     // Resetear cantidad
     setQuantity(1);
   };
+
+  const productData = dbProduct || fullProduct || productProp;
+  const productName = productData?.name || 'Conjunto Victoria';
+  const productCategory = productData?.category || 'Lencería';
+  const productSubcategory = productData?.subcategory || 'Conjunto';
+  const productPrice = productData?.price || '1111.00';
+  const productSKU = productData?.sku || 'LS-2024-123';
+  const productImages = productData?.images || [
+    'https://images.unsplash.com/photo-1762195020829-835d05d3ee80?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    'https://images.unsplash.com/photo-1763906471843-aa53dad9fba8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    'https://images.unsplash.com/photo-1762843353166-e0542bba1a66?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    'https://images.unsplash.com/photo-1762843352569-6350701c80d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+  ];
+  const productColors = productData?.colors || ['Negro', 'Blanco', 'Rosa', 'Rojo'];
+  const productSizes = productData?.sizes || ['XS', 'S', 'M', 'L', 'XL'];
+  const productMaterials = productData?.material || ['Encaje', 'Microfibra'];
+  const stockAvailable = productData?.stock || 5;
+  const shortDescription = productData?.description?.short || 'Elegante conjunto de lencería importada, confeccionado con materiales de la más alta calidad. Diseño sofisticado que combina comodidad y sensualidad.';
+  const longDescription = productData?.description?.long || '';
+  const features = productData?.description?.features || [];
+
+  const colorsList = (productColors || []).map((c: any) => {
+    if (typeof c === 'string') {
+      return { name: c, hex: '' };
+    }
+    return {
+      name: c.descripcion || c.codigo_color,
+      hex: c.color_hex || '#CCCCCC',
+      tipo: c.tipo_color,
+      img: c.img_estampado
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background py-8 md:py-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando detalles del producto...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const nextImage = () => {
+    setCurrentImage((prev) => (prev + 1) % productImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImage((prev) => (prev - 1 + productImages.length) % productImages.length);
+  };
+
+
 
   return (
     <div className="min-h-screen bg-background py-8 md:py-12">
@@ -100,9 +172,12 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 mb-16">
             {/* Image Gallery */}
             <div>
-              {/* Main Image - Mobile Swipe */}
+              {/* Main Image - Mobile Swipe & Desktop Hover Zoom */}
               <div
-                className="relative mb-4 aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-muted to-muted/50"
+                className="relative mb-4 aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 cursor-zoom-in"
+                onMouseMove={handleMouseMove}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 onTouchStart={(e) => {
                   const touch = e.touches[0];
                   const startX = touch.clientX;
@@ -139,7 +214,8 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
                     <ImageWithFallback
                       src={productImages[currentImage]}
                       alt={`Product view ${currentImage + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-75 ease-out"
+                      style={isZoomed ? zoomStyle : undefined}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -164,7 +240,7 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
 
                 {/* Image Indicators */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {productImages.map((_, index) => (
+                  {productImages.map((_: any, index: number) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImage(index)}
@@ -179,7 +255,7 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
 
               {/* Thumbnail Grid - Desktop */}
               <div className="hidden md:grid grid-cols-4 gap-4">
-                {productImages.map((img, index) => (
+                {productImages.map((img: any, index: number) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImage(index)}
@@ -220,7 +296,7 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
                     <div className="mb-4">
                       <p className="text-sm font-medium mb-2">Materiales:</p>
                       <div className="flex flex-wrap gap-2">
-                        {productMaterials.map((material, idx) => (
+                        {productMaterials.map((material: any, idx: number) => (
                           <span
                             key={idx}
                             className="px-3 py-1 bg-muted rounded-full text-xs"
@@ -252,7 +328,7 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
                               <strong>Características:</strong>
                             </p>
                             <ul className="list-disc list-inside space-y-1 ml-2">
-                              {features.map((feature, idx) => (
+                              {features.map((feature: any, idx: number) => (
                                 <li key={idx}>{feature}</li>
                               ))}
                             </ul>
@@ -273,58 +349,61 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
                 </div>
 
                 {/* Color Selection */}
-                <div className="mb-6">
-                  <h3 className="mb-3">
-                    Color: <span className="text-muted-foreground font-normal">{productColors[selectedColorIndex]}</span>
-                  </h3>
-                  <div className="flex gap-3 flex-wrap">
-                    {productColors.map((color, index) => {
-                      const colorMap: Record<string, string> = {
-                        'Negro': '#000000',
-                        'Blanco': '#FFFFFF',
-                        'Rosa': '#FFC0CB',
-                        'Rojo': '#800020',
-                        'Nude': '#E8B89A',
-                        'Beige': '#F5F5DC',
-                        'Gris': '#808080',
-                        'Azul': '#0000FF',
-                        'Azul Marino': '#000080',
-                        'Azul Oscuro': '#00008B',
-                        'Verde': '#008000',
-                        'Vino': '#722F37',
-                      };
+                {colorsList.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="mb-3">
+                      Color: <span className="text-muted-foreground font-normal">{colorsList[selectedColorIndex]?.name}</span>
+                    </h3>
+                    <div className="flex gap-3 flex-wrap">
+                      {colorsList.map((color: any, index: number) => {
+                        const colorMap: Record<string, string> = {
+                          'Negro': '#000000',
+                          'Blanco': '#FFFFFF',
+                          'Rosa': '#FFC0CB',
+                          'Rojo': '#800020',
+                          'Nude': '#E8B89A',
+                          'Beige': '#F5F5DC',
+                          'Gris': '#808080',
+                          'Azul': '#0000FF',
+                          'Azul Marino': '#000080',
+                          'Azul Oscuro': '#00008B',
+                          'Verde': '#008000',
+                          'Vino': '#722F37',
+                        };
 
-                      const hexColor = colorMap[color] || '#CCCCCC';
+                        const hexColor = color.hex || colorMap[color.name] || '#CCCCCC';
 
-                      return (
-                        <motion.button
-                          key={color}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => setSelectedColorIndex(index)}
-                          className={`relative w-12 h-12 rounded-full transition-all ${
-                            index === selectedColorIndex ? 'ring-2 ring-primary ring-offset-2' : ''
-                          }`}
-                          style={{ backgroundColor: hexColor }}
-                          aria-label={color}
-                          title={color}
-                        >
-                          {(hexColor === '#FFFFFF' || hexColor === '#F5F5DC') && (
-                            <div className="absolute inset-0 border border-border rounded-full" />
-                          )}
-                        </motion.button>
-                      );
-                    })}
+                        return (
+                          <motion.button
+                            key={`${color.name}-${index}`}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => setSelectedColorIndex(index)}
+                            className={`relative w-12 h-12 rounded-full transition-all ${
+                              index === selectedColorIndex ? 'ring-2 ring-primary ring-offset-2' : ''
+                            }`}
+                            style={{ backgroundColor: hexColor }}
+                            aria-label={color.name}
+                            title={color.name}
+                          >
+                            {(hexColor === '#FFFFFF' || hexColor === '#F5F5DC') && (
+                              <div className="absolute inset-0 border border-border rounded-full" />
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Size Selection */}
-                <div className="mb-6">
-                  <h3 className="mb-3">
-                    Talla: <span className="text-muted-foreground font-normal">{productSizes[selectedSizeIndex]}</span>
-                  </h3>
-                  <div className="flex gap-3 flex-wrap">
-                    {productSizes.map((size, index) => (
+                {productSizes.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="mb-3">
+                      Talla: <span className="text-muted-foreground font-normal">{productSizes[selectedSizeIndex]}</span>
+                    </h3>
+                    <div className="flex gap-3 flex-wrap">
+                    {productSizes.map((size: any, index: number) => (
                       <motion.button
                         key={size}
                         whileHover={{ scale: 1.05 }}
@@ -341,6 +420,7 @@ export function ProductDetailPage({ product: productProp, onProductClick, onHome
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Stock & Quantity */}
                 <div className="mb-8">

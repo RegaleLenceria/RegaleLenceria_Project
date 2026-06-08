@@ -75,21 +75,25 @@ export function StoreInfo() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="w-full rounded-2xl overflow-hidden shadow-lg"
+            className="w-full rounded-2xl overflow-hidden shadow-lg border border-border"
           >
             <div className="relative h-[300px] md:h-[400px]">
-              <img
-                src="/store-interior.jpg"
-                alt="Vitrina de Regale Lencería"
-                className="w-full h-full object-cover"
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3799.024739468869!2d-63.19675162504285!3d-17.79053438316697!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x93f1e81a535a7a05%3A0x7315277f8c447eab!2sRegale%20Lencer%C3%ADa!5e0!3m2!1ses-419!2sbo!4v1780499075865!5m2!1ses-419!2sbo"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación de Regale Lencería"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 text-center">
+              <div className="absolute bottom-4 right-4">
                 <a
                   href="https://maps.app.goo.gl/ijznZaaeU75Hu1j58"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block bg-primary text-primary-foreground px-6 py-2.5 uppercase tracking-widest text-xs hover:bg-primary/90 transition-colors"
+                  className="inline-block bg-primary text-primary-foreground px-6 py-2.5 uppercase tracking-widest text-xs hover:bg-primary/90 transition-colors shadow-lg rounded"
                 >
                   Cómo Llegar →
                 </a>

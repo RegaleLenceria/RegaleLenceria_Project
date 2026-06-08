@@ -16,6 +16,7 @@ import { TermsAndConditions } from './components/TermsAndConditions';
 import { CartPage } from './components/CartPage';
 import { CartProvider } from './context/CartContext';
 import { Product } from './data/products';
+import { ExitIntentModal } from './components/ExitIntentModal';
 
 type View = 'home' | 'product' | 'search' | 'category' | 'terms' | 'cart';
 
@@ -25,7 +26,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<Partial<Product> | undefined>(undefined);
+  const [selectedProduct, setSelectedProduct] = useState<any>(undefined);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -53,7 +54,7 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const goToProduct = (productData?: Partial<Product>) => {
+  const goToProduct = (productData?: any) => {
     if (productData) {
       setSelectedProduct(productData);
     }
@@ -155,6 +156,9 @@ export default function App() {
 
       {/* Back to Top Button */}
       <BackToTop />
+
+      {/* Exit Intent Modal */}
+      <ExitIntentModal />
     </div>
     </CartProvider>
   );

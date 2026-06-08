@@ -31,12 +31,10 @@ if (isset($_GET['id'])) {
 
     $sql = "SELECT
                 i.id, i.nombre_prenda, i.codigo, i.precio_base, i.genero,
-                i.marca_prenda, i.categoria, i.subcategoria,
-                i.descripcion_corta, i.descripcion_larga,
-                i.beneficio, i.tipoFaja, i.brasier, i.panties,
-                i.bikini, i.malla, i.balneario, i.pijamacomoda,
-                i.pijamasexy, i.tipolinea, i.estado,
-                GROUP_CONCAT(DISTINCT f.ruta ORDER BY f.id) AS fotos
+                i.marca_prenda, i.descripcion_corta, i.descripcion_larga, i.estado,
+                (SELECT cat.nombre FROM prenda_subcategoria ps JOIN subcategorias s ON ps.subcategoria_id = s.id JOIN categorias cat ON s.categoria_id = cat.id WHERE ps.prenda_id = i.id LIMIT 1) AS categoria,
+                (SELECT s.nombre FROM prenda_subcategoria ps JOIN subcategorias s ON ps.subcategoria_id = s.id WHERE ps.prenda_id = i.id LIMIT 1) AS subcategoria,
+                GROUP_CONCAT(DISTINCT f.ruta ORDER BY f.id SEPARATOR '|') AS fotos
             FROM inventario i
             LEFT JOIN fotos f ON i.id = f.id_prenda AND f.estado = 'activo'
             WHERE i.id = ? AND i.estado != 'no'
@@ -54,7 +52,11 @@ if (isset($_GET['id'])) {
     }
 
     // Tallas
-    $tallasRes = $db->prepare("SELECT DISTINCT talla FROM tallas WHERE id_prenda = ? ORDER BY talla");
+    $tallasRes = $db->prepare("SELECT DISTINCT talla FROM tallas WHERE id_prenda = ? AND estado = 'activo' ORDER BY talla");
+    if (!$tallasRes) {
+        // Fallback si no tiene campo estado
+        $tallasRes = $db->prepare("SELECT DISTINCT talla FROM tallas WHERE id_prenda = ? ORDER BY talla");
+    }
     $tallasRes->bind_param('i', $id);
     $tallasRes->execute();
     $tallas = array_column($tallasRes->get_result()->fetch_all(MYSQLI_ASSOC), 'talla');
@@ -68,9 +70,77 @@ if (isset($_GET['id'])) {
     $coloresRes->execute();
     $colores = $coloresRes->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    echo json_encode(formatProduct($row, $tallas, $colores));
+    // Materiales
+    $materialesRes = $db->prepare(
+        "SELECT m.nombre 
+         FROM prenda_material pm 
+         JOIN materiales m ON pm.material_id = m.id 
+         WHERE pm.prenda_id = ?"
+    );
+    $materiales = [];
+    if ($materialesRes) {
+        $materialesRes->bind_param('i', $id);
+        $materialesRes->execute();
+        $materiales = array_column($materialesRes->get_result()->fetch_all(MYSQLI_ASSOC), 'nombre');
+    }
+
+    // Stock total
+    $stockRes = $db->prepare("SELECT IFNULL(SUM(stock), 0) AS total_stock FROM stock WHERE id_prenda = ? AND estado != 'no'");
+    $totalStock = 0;
+    if ($stockRes) {
+        $stockRes->bind_param('i', $id);
+        $stockRes->execute();
+        $totalStock = (int)$stockRes->get_result()->fetch_assoc()['total_stock'];
+    }
+
+    echo json_encode(formatProduct($row, $tallas, $colores, $materiales, $totalStock));
     exit;
 }
+
+// Mapa de subcategorías del frontend a la BD
+$subMap = [
+    // Brasier
+    'pushup' => 'Push Up',
+    'bralette' => 'Bralette',
+    'strapple' => 'Strapless',
+    'escote' => 'Escote Profundo',
+    'bustier' => 'Bustier',
+    'top' => 'top',
+    'soporte' => 'Control y Soporte',
+    'postoperatorio' => 'PostOperatorio y Maternidad',
+    'controlespalda' => 'Control y Soporte',
+    'senyorero' => 'Senonero',
+    // Panty
+    'brasilera' => 'Brasilera',
+    'brasilera-tanga' => 'Brasilera',
+    'cachetero' => 'Cachetero',
+    'bikini' => 'Bikini',
+    'boxer' => 'Boxer',
+    'maternidad' => 'Meternidad',
+    'packs' => 'pack',
+    // Deportivos
+    'top_deportivos' => 'Top',
+    'camiseta' => 'Camiseta',
+    'chaqueta' => 'Chaqueta',
+    'short' => 'Short',
+    'falda' => 'Falda',
+    'biker' => 'Biker',
+    'legging' => 'Leggins',
+    'enterizo' => 'Enterizo',
+    'jogger' => 'Jogger',
+    'mangalarga' => 'Manga Larga',
+    // Trajes de Baño
+    'malla' => 'Malla',
+    'pareo' => 'Pareo',
+    'camisa' => 'Camisa',
+    'pantalon' => 'Pantalon',
+    'vestido' => 'Vestido',
+    // Pijamas
+    'babydoll' => 'Baby Doll',
+    'camison' => 'Camison',
+    'kimono' => 'Kimono',
+    'body' => 'Body',
+];
 
 // ── Lista de productos ────────────────────────────────────────────────
 $limit  = min((int)($_GET['limit'] ?? 12), 48);
@@ -81,28 +151,95 @@ $conditions = ["i.estado != 'no'"];
 $params     = [];
 $types      = '';
 
-$filterMap = [
-    'g'             => 'i.genero',
-    'c'             => 'i.categoria',
-    'm'             => 'i.marca_prenda',
-    'sub'           => 'i.subcategoria',
-    'b'             => 'i.beneficio',
-    'bra'           => 'i.brasier',
-    'pan'           => 'i.panties',
-    'bi'            => 'i.bikini',
-    'ma'            => 'i.malla',
-    'bal'           => 'i.balneario',
-    'pijamacomoda'  => 'i.pijamacomoda',
-    'pijamasexy'    => 'i.pijamasexy',
-    'tipolinea'     => 'i.tipolinea',
-];
-
-foreach ($filterMap as $param => $col) {
-    if (!empty($_GET[$param])) {
-        $conditions[] = "$col = ?";
-        $params[]     = $_GET[$param];
-        $types       .= 's';
+// 1. Categoría
+if (!empty($_GET['c'])) {
+    $cVal = $_GET['c'];
+    if ($cVal === 'ropainterior') {
+        $conditions[] = "i.id IN (
+            SELECT ps.prenda_id 
+            FROM prenda_subcategoria ps 
+            JOIN subcategorias s ON ps.subcategoria_id = s.id 
+            JOIN categorias cat ON s.categoria_id = cat.id 
+            WHERE cat.nombre IN ('Brasier', 'Panty')
+        )";
+    } else {
+        $mappedCat = $cVal;
+        if (strcasecmp($cVal, 'deportiva') === 0) $mappedCat = 'Deportivos';
+        if (strcasecmp($cVal, 'trajes') === 0) $mappedCat = 'Trajes de Baño';
+        if (strcasecmp($cVal, 'accesorios') === 0) $mappedCat = 'Accesorios';
+        
+        $conditions[] = "i.id IN (
+            SELECT ps.prenda_id 
+            FROM prenda_subcategoria ps 
+            JOIN subcategorias s ON ps.subcategoria_id = s.id 
+            JOIN categorias cat ON s.categoria_id = cat.id 
+            WHERE cat.nombre = ? OR cat.nombre LIKE ?
+        )";
+        $params[] = $mappedCat;
+        $params[] = '%' . $mappedCat . '%';
+        $types   .= 'ss';
     }
+}
+
+// 2. Género
+if (!empty($_GET['g'])) {
+    $conditions[] = "i.genero = ?";
+    $params[]     = $_GET['g'];
+    $types       .= 's';
+}
+
+// 3. Marca
+if (!empty($_GET['m'])) {
+    $conditions[] = "i.marca_prenda = ?";
+    $params[]     = $_GET['m'];
+    $types       .= 's';
+}
+
+// 4. Subcategoría
+$subVal = '';
+if (!empty($_GET['sub'])) {
+    $subVal = $_GET['sub'];
+} elseif (!empty($_GET['bra'])) {
+    $subVal = $_GET['bra'];
+} elseif (!empty($_GET['pan'])) {
+    $subVal = $_GET['pan'];
+} elseif (!empty($_GET['bi'])) {
+    $subVal = $_GET['bi'];
+} elseif (!empty($_GET['ma'])) {
+    $subVal = $_GET['ma'];
+} elseif (!empty($_GET['bal'])) {
+    $subVal = $_GET['bal'];
+}
+
+if ($subVal !== '') {
+    $mappedSub = $subVal;
+    $lowerSub = strtolower($subVal);
+    if (isset($subMap[$lowerSub])) {
+        $mappedSub = $subMap[$lowerSub];
+    }
+    
+    $conditions[] = "i.id IN (
+        SELECT ps.prenda_id 
+        FROM prenda_subcategoria ps 
+        JOIN subcategorias s ON ps.subcategoria_id = s.id 
+        WHERE s.nombre = ? OR s.nombre LIKE ?
+    )";
+    $params[] = $mappedSub;
+    $params[] = '%' . $mappedSub . '%';
+    $types   .= 'ss';
+}
+
+// 5. Beneficio
+if (!empty($_GET['b'])) {
+    $conditions[] = "i.id IN (
+        SELECT pb.prenda_id 
+        FROM prenda_beneficio pb 
+        JOIN beneficios b ON pb.beneficio_id = b.id 
+        WHERE b.nombre = ? OR b.nombre LIKE ?
+    )";
+    $params[] = $_GET['b'];
+    $params[] = '%' . $_GET['b'] . '%';
+    $types   .= 'ss';
 }
 
 // Búsqueda de texto libre
@@ -126,8 +263,10 @@ $orderBy = !empty($_GET['featured']) ? 'RAND()' : 'i.id DESC';
 
 $sql = "SELECT
             i.id, i.nombre_prenda, i.codigo, i.precio_base, i.genero,
-            i.marca_prenda, i.categoria, i.subcategoria,
-            i.descripcion_corta, i.estado,
+            i.marca_prenda, i.descripcion_corta, i.estado,
+            (SELECT cat.nombre FROM prenda_subcategoria ps JOIN subcategorias s ON ps.subcategoria_id = s.id JOIN categorias cat ON s.categoria_id = cat.id WHERE ps.prenda_id = i.id LIMIT 1) AS categoria,
+            (SELECT s.nombre FROM prenda_subcategoria ps JOIN subcategorias s ON ps.subcategoria_id = s.id WHERE ps.prenda_id = i.id LIMIT 1) AS subcategoria,
+            (SELECT IFNULL(SUM(st.stock), 0) FROM stock st WHERE st.id_prenda = i.id AND st.estado != 'no') AS stock,
             GROUP_CONCAT(DISTINCT f.ruta ORDER BY f.id SEPARATOR '|') AS fotos
         FROM inventario i
         LEFT JOIN fotos f ON i.id = f.id_prenda AND f.estado = 'activo'
@@ -145,7 +284,7 @@ $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$products = array_map(fn($r) => formatProduct($r), $rows);
+$products = array_map(fn($r) => formatProduct($r, [], [], [], [], (int)($r['stock'] ?? 0)), $rows);
 
 echo json_encode([
     'data'       => $products,
@@ -156,7 +295,7 @@ echo json_encode([
 ]);
 
 // ── Helper ────────────────────────────────────────────────────────────
-function formatProduct(array $row, array $tallas = [], array $colores = []): array {
+function formatProduct(array $row, array $tallas = [], array $colores = [], array $materiales = [], int $stock = 0): array {
     $fotos = $row['fotos']
         ? array_map(
             fn($f) => UPLOAD_BASE . '/' . ltrim($f, '/upload/'),
@@ -181,7 +320,8 @@ function formatProduct(array $row, array $tallas = [], array $colores = []): arr
         'images'   => $fotos,
         'sizes'    => $tallas,
         'colors'   => $colores,
-        'stock'    => 1, // Se puede sumar de tabla stock si se requiere
+        'material' => $materiales,
+        'stock'    => $stock,
         'isNew'    => false,
         'discount' => null,
     ];
