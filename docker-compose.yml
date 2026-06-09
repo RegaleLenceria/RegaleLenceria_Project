@@ -24,8 +24,8 @@ services:
     ports:
       - "8083:80"
     volumes:
-      - ./api:/var/www/html/api          # Endpoints PHP
-      - ./upload:/var/www/html/upload    # Imágenes de productos
+      - ./api:/var/www/html/api # Endpoints PHP
+      - ./upload:/var/www/html/upload # Imágenes de productos
     environment:
       DB_HOST: db
       DB_USER: root
