@@ -4,7 +4,7 @@ Este proyecto está diseñado para funcionar como un E-commerce de lencería y r
 
 ---
 
-## 🏗️ Arquitectura del Frontend (Modular Clean Architecture)
+## Arquitectura del Frontend (Modular Clean Architecture)
 
 El código del frontend (`src/`) ha sido estructurado siguiendo buenas prácticas de nivel **Senior** para garantizar alta cohesión, bajo acoplamiento y escalabilidad del proyecto en producción.
 
@@ -38,7 +38,7 @@ src/
 
 ---
 
-## 🌐 Estrategia de APIs y Seguridad en Producción
+##  Estrategia de APIs y Seguridad en Producción
 
 El proyecto utiliza una estrategia de **rutas relativas** (`/api`) en el cliente HTTP en lugar de hardcodear URLs absolutas o exponerlas en un `.env` en el cliente.
 
@@ -63,7 +63,7 @@ server: {
 
 ---
 
-## 🛠️ Requisitos de Software
+##  Requisitos de Software
 
 * Servidor Apache o Nginx (con soporte de proxy inverso en producción)
 * PHP 8.x
@@ -72,7 +72,7 @@ server: {
 
 ---
 
-## 🗄️ Estructura de la Base de Datos
+##  Estructura de la Base de Datos
 
 ```
 regalele_base
@@ -150,12 +150,12 @@ regalele_base
          |- talla
 ```
 
-### 🔒 Seguridad de Acceso
+###  Seguridad de Acceso
 Las contraseñas de la tabla `control` están encriptadas con **Bcrypt Hash** para mitigar cualquier riesgo de filtrado de credenciales.
 
 ---
 
-## 🚀 Despliegue y Comandos de Consola
+##  Despliegue y Comandos de Consola
 
 ### Desarrollo Local
 Para iniciar el servidor de desarrollo de Vite con recarga rápida en el puerto `5173`:
